@@ -5,17 +5,20 @@ import matplotlib.pyplot as plt
 from flask import Flask
 import threading
 
-BOT_TOKEN = "9273323419:AAEyT51oiXCl5PPJtwst6hHrYrz8wPt3t7I"
-CHAT_ID = "8908884169"
+# --- TOKEN AB GITHUB SE HATA DIYA - RENDER SE AYEGA ---
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "9273323419:AAEyT51oiXCl5PPJtwst6hHrYrz8wPt3t7I")
+CHAT_ID = os.environ.get("CHAT_ID", "8908884169")
 PAIR = "EURUSDT"
 
 app = Flask(__name__)
 @app.route('/')
-def home(): return "ALI PRO TRADER 10-BOT ORIGINAL ACCURACY LIVE"
+def home(): 
+    return "ALI PRO TRADER 10-BOT ORIGINAL ACCURACY LIVE - Running!"
 
 def send_text(t):
-    try: requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":CHAT_ID,"text":t,"parse_mode":"Markdown"}, timeout=15)
-    except: pass
+    try: 
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":CHAT_ID,"text":t,"parse_mode":"Markdown"}, timeout=15)
+    except Exception as e: print(e)
 
 def send_graph(entry, exit_price, is_win, direction, accuracy):
     try:
@@ -24,11 +27,13 @@ def send_graph(entry, exit_price, is_win, direction, accuracy):
         plt.plot(prices, color='#00ff88' if is_win else '#ff4444', linewidth=3)
         plt.axhline(entry, color='yellow', linestyle='--', label='Entry')
         plt.title(f"ALI PRO TRADER - {accuracy}% - {'WIN' if is_win else 'LOSS'}", color='white')
-        plt.tight_layout(); plt.savefig('/tmp/graph.png'); plt.close()
+        plt.tight_layout(); 
+        os.makedirs('/tmp', exist_ok=True)
+        plt.savefig('/tmp/graph.png'); plt.close()
         cap = f"{'🔥 *Trade WIN Ho Gayi Hai* 🔥' if is_win else '😔 *Trade LOSS* 😔'}\n\n*ALI PRO TRADER 10-BOT*\nAsset: `{PAIR}` Dir: `{direction}`\nAccuracy: `{accuracy}%`\nEntry: `{entry:.5f}` Exit: `{exit_price:.5f}`\n\n{'MashAllah ALI PRO TRADER Consensus kamyab! 💪\nNext signal ka wait karo 📈' if is_win else 'Himmat nahi harni! Agla strong ayega InshaAllah 🤲'}"
         with open('/tmp/graph.png','rb') as ph:
             requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto", data={"chat_id":CHAT_ID,"caption":cap,"parse_mode":"Markdown"}, files={"photo":ph}, timeout=20)
-    except Exception as e: print(e)
+    except Exception as e: print(f"Graph Error: {e}")
 
 def get_df():
     url = f"https://api.binance.com/api/v3/klines?symbol={PAIR}&interval=1m&limit=100"
@@ -93,8 +98,11 @@ def bot_loop():
             send_graph(entry, exit_price, is_win, direction, accuracy)
             time.sleep(300)
         except Exception as e:
-            print(e); time.sleep(20)
+            print(f"Bot Error: {e}"); time.sleep(20)
 
+# Bot ko background me start
 threading.Thread(target=bot_loop, daemon=True).start()
+
+# Render ko port dena zaruri hai
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
